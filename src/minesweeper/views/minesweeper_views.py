@@ -7,7 +7,7 @@ LIGHTGRAY = (198, 198, 198)
 GRAY = (192, 192, 192)
 BLACK = (132, 132, 132)
 RED = (255, 0, 0)
-BLUE = (0,0,255)
+GREEN = (0, 255, 0)
 
 pygame.init()
 screen = pygame.display.set_mode(SIZE)
@@ -18,46 +18,81 @@ rect_width = 20
 rect_height = 20
 rect_dist = 2
 
-# Store block positions and their initial color (LIGHTGRAY)
-block_positions = []
-for i in range(9):
-    for j in range(9):
-        x = 20 + i * (rect_dist + rect_width)
-        y = 20 + j * (rect_dist + rect_height)
-        block_positions.append({"rect": pygame.Rect(x, y, rect_width, rect_height), "color": LIGHTGRAY})
+# Block class to represent each individual rectangle
+class Block:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, rect_width, rect_height)
+        self.color = LIGHTGRAY
+        self.hidden = False
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.rect, 0)
+        pygame.draw.rect(surface, BLACK, self.rect, 1)
+
+    def toggle_color(self):
+        if self.color == LIGHTGRAY:
+            self.color = GREEN
+        if self.hidden:
+            self.color = RED
+
+    def set_hidden(self):
+        self.hidden = True
+
+# Game class to manage the overall game logic
+class Game:
+    def __init__(self):
+        self.blocks = []
+        self.hidden_blocks = []
+        self.create_grid()
+
+    def create_grid(self):
+        # Initialize the grid of blocks
+        for i in range(9):
+            for j in range(9):
+                x = 20 + i * (rect_dist + rect_width)
+                y = 20 + j * (rect_dist + rect_height)
+                block = Block(x, y)
+                self.blocks.append(block)
         
-hidden_blocks = random.sample(block_positions, 10)
+        # Randomly hide 10 blocks
+        self.hidden_blocks = random.sample(self.blocks, 10)
+        for block in self.hidden_blocks:
+            block.set_hidden()
+
+    def handle_click(self, mouse_pos):
+        for block in self.blocks:
+            if block.rect.collidepoint(mouse_pos):
+                block.toggle_color()
+
+    def draw(self, surface):
+        surface.fill(GRAY)
+        for block in self.blocks:
+            block.draw(surface)
 
 # Main loop
-running = True
-while running:
-    # Fill the screen with gray
-    screen.fill(GRAY)
-    # Draw all rectangles
-    for block in block_positions:
-        pygame.draw.rect(screen, block["color"], block["rect"], 0)
-        pygame.draw.rect(screen, BLACK, block["rect"], 1)
-        
-    for block in hidden_blocks:
-        block["hidden"] = True
-        
-    # Update the display
-    pygame.display.update()
-    # Event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        # Mouse click detection
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_pos = pygame.mouse.get_pos()
-            # Check if any rectangle was clicked
-            for block in block_positions:
-                if block["rect"].collidepoint(mouse_pos):
-                    # Toggle color between RED and LIGHTGRAY for that rectangle
-                    if block["color"] == LIGHTGRAY:
-                        block["color"] = RED
-                    # Hide some rectangle behind LIGHTGRAY rectangle 
-                    if block.get("hidden"):
-                        block["color"] = BLUE  
+def main():
+    game = Game()
+    running = True
 
-pygame.quit()
+    while running:
+        # Draw the blocks
+        game.draw(screen)
+
+        # Update the display
+        pygame.display.update()
+
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            
+            # Mouse click detection
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                game.handle_click(mouse_pos)
+
+    pygame.quit()
+
+# Run the game
+if __name__ == "__main__":
+    main()
