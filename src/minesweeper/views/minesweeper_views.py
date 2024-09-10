@@ -48,6 +48,7 @@ class Game:
         self.start_time = 0  # Time starts at 0
         self.game_started = False  # Track whether the game has started
         self.font = pygame.font.Font(None, 36)  # Font for timer
+        
     def create_grid(self):
         # Initialize the grid of blocks
         for i in range(9):
@@ -77,7 +78,7 @@ class Game:
         # Calculate and render the timer only if the game has started
         if self.game_started:
             elapsed_time = (pygame.time.get_ticks() - self.start_time) // 1000  # Time in seconds
-            timer_text = self.font.render(f"{elapsed_time}s", True, WHITE)
+            timer_text = self.font.render(f"{elapsed_time}s", True, BLACK)
             surface.blit(timer_text, (SIZE[0] - timer_text.get_width() - 3, 3))  # Top-right corner
             
 
