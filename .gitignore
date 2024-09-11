@@ -1,4 +1,18 @@
+# Ignore file DS_Store
 .DS_Store
+# Ignore compiled Python files and folders
 __pycache__/
 *.pyc
 *.pyo
+
+# Ignore virtual environments (if used)
+venv/
+.env/
+*.env
+
+# Log files
+*.log
+
+# Ignore IDE tool folders
+.vscode/
+.idea/
