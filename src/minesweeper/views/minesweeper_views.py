@@ -1,193 +1,87 @@
-import pygame, random
-from pygame.locals import *
+import pygame
 
-# Initialize Pygame
-pygame.init()
-
-# Colors
-LIGHTGRAY = (198, 198, 198)
+# Define colors
 GRAY = (192, 192, 192)
-BLACK = (132, 132, 132)
+BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
-DARKGRAY = (100, 100, 100)
 HOVER_COLOR = (170, 170, 170)
-FLAG_COLOR = (255, 255, 0)  # Yellow for flagged blocks
+BUTTON_COLOR = (50, 150, 255)
+HOVER_BUTTON_COLOR = (80, 180, 255)
 
-# Font setup
+# Define fonts
 pygame.font.init()
-font = pygame.font.SysFont("Arial", 50)
-small_font = pygame.font.SysFont("Arial", 30)
-timer_font = pygame.font.SysFont("Arial", 36)
+font = pygame.font.SysFont(None, 20)
+small_font = pygame.font.SysFont(None, 30)
+timer_font = pygame.font.SysFont(None, 28)
 
-# Rectangle dimensions
-rect_width = 20
-rect_height = 20
-rect_dist = 2
+# Load assets
+flag_image = pygame.image.load('assets/flag.png')
+mine_image = pygame.image.load('assets/flag.png')
 
-# Block class to represent each individual rectangle
-class Block:
-    def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, rect_width, rect_height)
-        self.color = LIGHTGRAY
-        self.hidden = False
-        self.hovered = False
-        self.flagged = False  # To indicate if a block is flagged
+class GameView:
+    def __init__(self, board):
+        self.board = board
+        self.screen_size = (20 + board.width * 22, 20 + board.height * 22 + 100)
+        self.screen = pygame.display.set_mode(self.screen_size)
+        pygame.display.set_caption("Minesweeper")
+        self.start_time = pygame.time.get_ticks()  # Initialize the start time
+        self.game_over_time = None  # Variable to store the final time when game ends
 
-    def draw(self, surface):
-        # Draw the block with hover and flagging logic
-        if self.flagged:
-            pygame.draw.rect(surface, FLAG_COLOR, self.rect, 0)  # Draw flagged block as yellow
-        elif self.hovered:
-            pygame.draw.rect(surface, HOVER_COLOR, self.rect, 0)
-        else:
-            pygame.draw.rect(surface, self.color, self.rect, 0)
-        pygame.draw.rect(surface, BLACK, self.rect, 1)
-
-    def toggle_color(self):
-        if not self.flagged:  # Don't toggle if the block is flagged
-            if self.color == LIGHTGRAY:
-                self.color = GREEN
-            if self.hidden:
-                self.color = RED
-
-    def set_hidden(self):
-        self.hidden = True
-
-    def is_revealed(self):
-        return self.color == GREEN
-
-    def check_hover(self, mouse_pos):
-        self.hovered = self.rect.collidepoint(mouse_pos)
-
-    def toggle_flag(self):
-        # Toggle the flagged state of the block if it's not revealed
-        if self.color == LIGHTGRAY:
-            self.flagged = not self.flagged
-
-# Game class to manage the overall game logic
-class Game:
-    def __init__(self, grid_size, num_hidden):
-        self.grid_size = grid_size  # (rows, cols)
-        self.num_hidden = num_hidden
-        self.blocks = []
-        self.hidden_blocks = []
-        self.create_grid()
-        self.start_time = 0  # Time starts at 0
-        self.game_started = False  # Track whether the game has started
-        self.game_over = False  # Flag to check if the game is over
-        self.victory = False  # Flag to check if the player has won
-        self.final_time = None  # Variable to store final time after game over
-
-    def create_grid(self):
-        rows, cols = self.grid_size
-        for i in range(rows):
-            for j in range(cols):
-                x = 20 + j * (rect_dist + rect_width)
-                y = 100 + i * (rect_dist + rect_height)  # Leave space at the top for the timer
-                block = Block(x, y)
-                self.blocks.append(block)
+    def draw(self):
+        self.screen.fill(GRAY)
         
-        # Randomly hide blocks (red blocks)
-        self.hidden_blocks = random.sample(self.blocks, self.num_hidden)
-        for block in self.hidden_blocks:
-            block.set_hidden()
+        # Calculate elapsed time
+        if self.game_over_time is None:  # Timer is running
+            elapsed_time = (pygame.time.get_ticks() - self.start_time) // 1000
+        else:  # Timer has stopped (game over)
+            elapsed_time = self.game_over_time
 
-    def handle_left_click(self, mouse_pos):
-        if not self.game_started:
-            self.start_time = pygame.time.get_ticks()
-            self.game_started = True
+        timer_text = timer_font.render(f"Time: {elapsed_time}s", True, WHITE)
+        self.screen.blit(timer_text, (20, 20))  # Display the timer at the top
 
-        if self.game_over:
-            return  # Prevent further actions if the game is over
+        # Display remaining mines
+        mines_text = timer_font.render(f"Mines: {self.board.mines_remaining}", True, WHITE)
+        self.screen.blit(mines_text, (20, 50))  # Display mines remaining below the timer
 
-        for block in self.blocks:
-            if block.rect.collidepoint(mouse_pos):
-                block.toggle_color()
-                if block.color == RED:
-                    self.game_over = True  # Set game over flag
-                    self.final_time = (pygame.time.get_ticks() - self.start_time) // 1000
+        for y in range(self.board.height):
+            for x in range(self.board.width):
+                cell = self.board.grid[y][x]
+                rect = pygame.Rect(x * 22 + 20, y * 22 + 100, 20, 20)
+                color = GREEN if cell.is_revealed else WHITE
+                if cell.is_flagged:
+                    self.screen.blit(flag_image, rect)  # Draw flag image
+                pygame.draw.rect(self.screen, color, rect)
+                pygame.draw.rect(self.screen, BLACK, rect, 1)
+                if cell.is_revealed and cell.is_mine:
+                    self.screen.blit(mine_image, rect)  # Draw mine image
+                elif cell.is_revealed and cell.adjacent_mines > 0:
+                    text_surf = font.render(str(cell.adjacent_mines), True, BLACK)
+                    self.screen.blit(text_surf, (rect.x + 4, rect.y + 2))
 
-    def handle_right_click(self, mouse_pos):
-        if self.game_over:
-            return  # Prevent flagging after the game is over
+        pygame.display.flip()
 
-        # Right-click toggles a flag on the block
-        for block in self.blocks:
-            if block.rect.collidepoint(mouse_pos):
-                block.toggle_flag()
-
-    def check_victory(self):
-        if all(block.is_revealed() for block in self.blocks if not block.hidden):
-            self.victory = True
-            self.game_over = True
-            self.final_time = (pygame.time.get_ticks() - self.start_time) // 1000
-
-    def draw(self, surface):
-        surface.fill(GRAY)
-        for block in self.blocks:
-            block.draw(surface)
-
-        # Draw timer if the game is ongoing
-        if self.game_started and not self.game_over:
-            current_time = (pygame.time.get_ticks() - self.start_time) // 1000
-            timer_surface = timer_font.render(f"Time: {current_time}", True, BLACK)
-            surface.blit(timer_surface, (20, 20))
+    def handle_click(self, pos, right_click=False):
+        if self.board.game_over or self.board.check_win():
+            return
         
-        # Draw final time if the game is over
-        if self.final_time is not None:
-            final_time_surface = timer_font.render(f"Final Time: {self.final_time}s", True, BLACK)
-            surface.blit(final_time_surface, (20, 20))
+        x, y = pos
+        x = (x - 20) // 22
+        y = (y - 100) // 22
+        if 0 <= x < self.board.width and 0 <= y < self.board.height:
+            if right_click:
+                self.board.set_flag(x, y)
+            else:
+                self.board.reveal_cell(x, y)
+            
+            if self.board.game_over:  # Stop the timer if game is over
+                self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
+                print("Game Over")
+            elif self.board.check_win():
+                print("You Win!")
+                self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
 
-        # Draw "Game Over" message if the player loses
-        if self.game_over and not self.victory:
-            game_over_surface = font.render("Game Over", True, RED)
-            surface.blit(game_over_surface, (self.grid_size[1] * rect_width // 2 - 100, 50))
-
-        # Draw "You Win" message if the player wins
-        if self.victory:
-            victory_surface = font.render("You Win!", True, GREEN)
-            surface.blit(victory_surface, (self.grid_size[1] * rect_width // 2 - 100, 50))
-
-# Main function to run the game
-def main():
-    # Select difficulty (for example, using grid size 9x9 and 10 hidden blocks)
-    grid_size = (9, 9)
-    num_hidden = 10
-    screen = pygame.display.set_mode((400, 400))  # Adjust size as needed
-    pygame.display.set_caption("Minesweeper")
-
-    # Create the game object
-    game = Game(grid_size, num_hidden)
-
-    clock = pygame.time.Clock()
-
-    running = True
-    while running:
-        mouse_pos = pygame.mouse.get_pos()
-        for block in game.blocks:
-            block.check_hover(mouse_pos)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left-click
-                    game.handle_left_click(mouse_pos)
-                elif event.button == 3:  # Right-click (flagging)
-                    game.handle_right_click(mouse_pos)
-
-        # Check for victory condition
-        game.check_victory()
-
-        # Draw the game
-        game.draw(screen)
-        pygame.display.update()
-
-        clock.tick(60)
-
-    pygame.quit()
-
-if __name__ == "__main__":
-    main()
+def select_difficulty(screen):
+    # Dummy function for now
+    return 'easy'
