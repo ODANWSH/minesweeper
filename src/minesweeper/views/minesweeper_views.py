@@ -124,7 +124,7 @@ class Game:
                 final_text = font.render(f"Final Time: {self.final_time}s", True, WHITE)
                 surface.blit(final_text, (surface.get_width() // 2 - final_text.get_width() // 2, 20))
 
-# Button class for selecting difficulty
+# Button class for selecting difficulty hihi
 class Button:
     def __init__(self, x, y, width, height, text):
         self.rect = pygame.Rect(x, y, width, height)
