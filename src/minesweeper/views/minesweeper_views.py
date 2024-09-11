@@ -17,8 +17,8 @@ small_font = pygame.font.SysFont(None, 30)
 timer_font = pygame.font.SysFont(None, 28)
 
 # Load assets
-flag_image = pygame.image.load('assets/flag.png')
-mine_image = pygame.image.load('assets/flag.png')
+flag_image = pygame.transform.scale(pygame.image.load('assets/bomb.png'), (20, 20))
+mine_image = pygame.transform.scale(pygame.image.load('assets/bomb.png'), (20, 20))
 
 class GameView:
     def __init__(self, board):
