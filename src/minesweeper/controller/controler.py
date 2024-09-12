@@ -1,11 +1,13 @@
 import pygame
+from model import Board
+from view import GameView
 
 class Controller:
     def __init__(self, view):
         self.view = view
         self.running = True
         self.start_time = pygame.time.get_ticks()  # Initialize the start time
-        self.game_over_time = None  # Variable to store the final time when game ends
+        self.game_over_time = None
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -14,34 +16,38 @@ class Controller:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 right_click = event.button == 3  # Right mouse button
-                self.view.handle_click(pos, right_click)
+                if self.view.board.game_over:
+                    # Restart the game
+                    self.restart_game()
+                else:
+                    self.view.handle_click(pos, right_click)
 
     def update_model(self):
-        # Met à jour le modèle en fonction des interactions
         if self.view.board.check_win():
             print("You Win!")
             self.view.board.game_over = True
             self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
         elif self.view.board.game_over:
             print("Game Over")
-            if self.game_over_time is None:  # Record time if not already set
+            if self.game_over_time is None:
                 self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
 
     def update_view(self):
-        # Redessine la vue avec les nouvelles informations du modèle
-        self.view.draw(self.game_over_time, (pygame.time.get_ticks() - self.start_time) // 1000)
-        pygame.display.flip()
+        elapsed_time = (pygame.time.get_ticks() - self.start_time) // 1000 if not self.view.board.game_over else None
+        self.view.draw(self.game_over_time, elapsed_time)
 
     def run(self):
         while self.running:
             self.handle_events()
-            if self.view.board.game_over:
-                self.handle_game_over()
             self.update_model()
             self.update_view()
 
-    def handle_game_over(self):
-        # Affiche un message ou gère la fin du jeu
-        if self.view.board.game_over:
-            print("Game Over! Final Time:", self.game_over_time)
-            self.running = False
+    def restart_game(self):
+        # Recreate the view and the controller
+        self.view = GameView(Board(self.view.board.width, self.view.board.height, self.view.board.num_mines))
+        
+        self.start_time = pygame.time.get_ticks()  # Reset the start time
+        self.game_over_time = None  # Reset the game over time
+        self.view.board.game_over = False  # Reset game over status
+        self.update_view()  # Update the view for the new game
+        
