@@ -17,7 +17,7 @@ small_font = pygame.font.SysFont(None, 30)
 timer_font = pygame.font.SysFont(None, 28)
 
 # Load assets
-flag_image = pygame.transform.scale(pygame.image.load('assets/bomb.png'), (20, 20))
+flag_image = pygame.transform.scale(pygame.image.load('assets/flag.png'), (20, 20))
 mine_image = pygame.transform.scale(pygame.image.load('assets/bomb.png'), (20, 20))
 
 class GameView:
@@ -26,20 +26,14 @@ class GameView:
         self.screen_size = (20 + board.width * 22, 20 + board.height * 22 + 100)
         self.screen = pygame.display.set_mode(self.screen_size)
         pygame.display.set_caption("Minesweeper")
-        self.start_time = pygame.time.get_ticks()  # Initialize the start time
-        self.game_over_time = None  # Variable to store the final time when game ends
 
-    def draw(self):
+    def draw(self, game_over_time=None, elapsed_time=None):
         self.screen.fill(GRAY)
         
         # Calculate elapsed time
-        if self.game_over_time is None:  # Timer is running
-            elapsed_time = (pygame.time.get_ticks() - self.start_time) // 1000
-        else:  # Timer has stopped (game over)
-            elapsed_time = self.game_over_time
-
-        timer_text = timer_font.render(f"Time: {elapsed_time}s", True, WHITE)
-        self.screen.blit(timer_text, (20, 20))  # Display the timer at the top
+        if elapsed_time is not None:
+            timer_text = timer_font.render(f"Time: {elapsed_time}s", True, WHITE)
+            self.screen.blit(timer_text, (20, 20))  # Display the timer at the top
 
         # Display remaining mines
         mines_text = timer_font.render(f"Mines: {self.board.mines_remaining}", True, WHITE)
@@ -76,11 +70,9 @@ class GameView:
                 self.board.reveal_cell(x, y)
             
             if self.board.game_over:  # Stop the timer if game is over
-                self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
                 print("Game Over")
             elif self.board.check_win():
                 print("You Win!")
-                self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
 
 def select_difficulty(screen):
     # Dummy function for now
