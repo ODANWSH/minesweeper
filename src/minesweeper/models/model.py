@@ -62,7 +62,7 @@ class Board:
 
 def get_difficulty_settings(difficulty):
     if difficulty == 'easy':
-        return (9, 9, 10)
+        return (2, 2, 1)
     elif difficulty == 'medium':
         return (16, 16, 40)
     elif difficulty == 'hard':
