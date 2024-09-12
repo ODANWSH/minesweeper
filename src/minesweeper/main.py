@@ -1,33 +1,53 @@
 import pygame
+from model import Board
 from view import GameView
-from difficulty_selection_view import DifficultySelectionView
-from model import Board, get_difficulty_settings
-from controller import Controller
 
-def main():
-    while True:
-        # Display difficulty selection screen
-        selection_view = DifficultySelectionView()
-        selection_view.run()
-        difficulty = selection_view.difficulty
-        
-        if not difficulty:
-            raise ValueError("Difficulty was not selected.")
-        
-        # Initialize game with selected difficulty
-        width, height, num_mines = get_difficulty_settings(difficulty)
-        board = Board(width, height, num_mines)
-        game_view = GameView(board)
-        controller = Controller(game_view)
-        
-        # Run the game
-        while True:
-            controller.handle_events()
-            controller.update_model()
-            controller.update_view()
-            
-            if game_view.board.game_over or game_view.board.check_win():
-                break
+class Controller:
+    def __init__(self, view):
+        self.view = view
+        self.running = True
+        self.start_time = pygame.time.get_ticks()  # Initialize the start time
+        self.game_over_time = None
 
-if __name__ == "__main__":
-    main()
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                right_click = event.button == 3  # Right mouse button
+                if self.view.board.game_over:
+                    # Restart the game
+                    self.restart_game()
+                else:
+                    self.view.handle_click(pos, right_click)
+
+    def update_model(self):
+        if self.view.board.check_win():
+            print("You Win!")
+            self.view.board.game_over = True
+            self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
+        elif self.view.board.game_over:
+            print("Game Over")
+            if self.game_over_time is None:
+                self.game_over_time = (pygame.time.get_ticks() - self.start_time) // 1000
+
+    def update_view(self):
+        elapsed_time = (pygame.time.get_ticks() - self.start_time) // 1000 if not self.view.board.game_over else None
+        self.view.draw(self.game_over_time, elapsed_time)
+
+    def run(self):
+        while self.running:
+            self.handle_events()
+            self.update_model()
+            self.update_view()
+
+    def restart_game(self):
+        # Recreate the view and the controller
+        self.view = GameView(Board(self.view.board.width, self.view.board.height, self.view.board.num_mines))
+        
+        self.start_time = pygame.time.get_ticks()  # Reset the start time
+        self.game_over_time = None  # Reset the game over time
+        self.view.board.game_over = False  # Reset game over status
+        self.update_view()  # Update the view for the new game
+        
