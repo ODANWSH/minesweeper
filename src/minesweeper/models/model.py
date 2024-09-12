@@ -1,78 +1,80 @@
-
+import random
 
 class Cell:
     def __init__(self):
-        self.is_mine = False  # Si la case contient une mine
-        self.is_revealed = False  # Si la case a été révélée
-        self.is_flagged = False  # Si la case est marquée par un drapeau
-        self.adjacent_mines = 0  # Nombre de mines autour de cette case
-    
-    def reveal(self):
-        self.is_revealed = True
-    
-    def toggle_flag(self):
-        self.is_flagged = not self.is_flagged
-
-
-
-
+        self.is_mine = False
+        self.is_revealed = False
+        self.is_flagged = False
+        self.adjacent_mines = 0
 
 class Board:
-    def __init__(self, rows, cols, num_mines):
-        self.rows = rows  # Nombre de lignes
-        self.cols = cols  # Nombre de colonnes
-        self.num_mines = num_mines  # Nombre de mines à placer
-        self.grid = self.create_board()  # Plateau de jeu sous forme de grille de cellules
-        self.generate_mines()  # Placer les mines sur le plateau
+    def __init__(self, width, height, num_mines):
+        self.width = width
+        self.height = height
+        self.num_mines = num_mines
+        self.grid = [[Cell() for _ in range(width)] for _ in range(height)]
+        self.mines_remaining = num_mines
+        self.game_over = False
+        
+        self._place_mines()
+        self._calculate_adjacent_mines()
 
-    def create_board(self):
-        # Crée un plateau vide avec des instances de la classe Cell
-        return [[Cell() for _ in range(self.cols)] for _ in range(self.rows)]
-
-    def generate_mines(self):
-        # Placer des mines aléatoirement sur le plateau
-        import random
+    def _place_mines(self):
         mines_placed = 0
         while mines_placed < self.num_mines:
-            row = random.randint(0, self.rows - 1)
-            col = random.randint(0, self.cols - 1)
-            if not self.grid[row][col].is_mine:
-                self.grid[row][col].is_mine = True
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            if not self.grid[y][x].is_mine:
+                self.grid[y][x].is_mine = True
                 mines_placed += 1
-                # Après avoir placé la mine, mettre à jour les cellules voisines
-                self.update_adjacent_cells(row, col)
 
-    def update_adjacent_cells(self, row, col):
-        # Met à jour le nombre de mines adjacentes pour les cellules autour d'une mine
-        for i in range(max(0, row - 1), min(self.rows, row + 2)):
-            for j in range(max(0, col - 1), min(self.cols, col + 2)):
-                if not self.grid[i][j].is_mine:
-                    self.grid[i][j].adjacent_mines += 1
+    def _calculate_adjacent_mines(self):
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.grid[y][x].is_mine:
+                    continue
+                count = 0
+                for dy in [-1, 0, 1]:
+                    for dx in [-1, 0, 1]:
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < self.height and 0 <= nx < self.width and self.grid[ny][nx].is_mine:
+                            count += 1
+                self.grid[y][x].adjacent_mines = count
 
-    def set_flag(self, row, col):
-        # Marquer ou démarcher une case
-        self.grid[row][col].toggle_flag()
+    def reveal_cell(self, x, y):
+        if not (0 <= x < self.width and 0 <= y < self.height) or self.grid[y][x].is_revealed:
+            return
+        self.grid[y][x].is_revealed = True
+        if self.grid[y][x].is_mine:
+            self.game_over = True
+        elif self.grid[y][x].adjacent_mines == 0:
+            for dy in [-1, 0, 1]:
+                for dx in [-1, 0, 1]:
+                    if dy == 0 and dx == 0:
+                        continue
+                    self.reveal_cell(x + dx, y + dy)
 
-    def reveal_cell(self, row, col):
-        # Révéler une case (à développer : propagation si aucune mine adjacente)
-        cell = self.grid[row][col]
-        if not cell.is_flagged and not cell.is_revealed:
-            cell.reveal()
-            # Si la case révélée n'a pas de mines adjacentes, révéler ses voisines
-            if cell.adjacent_mines == 0:
-                self.reveal_adjacent_cells(row, col)
-
-    def reveal_adjacent_cells(self, row, col):
-        # Révéler récursivement les cases adjacentes sans mines adjacentes
-        for i in range(max(0, row - 1), min(self.rows, row + 2)):
-            for j in range(max(0, col - 1), min(self.cols, col + 2)):
-                if not self.grid[i][j].is_revealed and not self.grid[i][j].is_mine:
-                    self.reveal_cell(i, j)
+    def set_flag(self, x, y):
+        if not (0 <= x < self.width and 0 <= y < self.height) or self.grid[y][x].is_revealed:
+            return
+        self.grid[y][x].is_flagged = not self.grid[y][x].is_flagged
+        self.mines_remaining += -1 if self.grid[y][x].is_flagged else 1
 
     def check_win(self):
-        # Vérifier si toutes les cases non-minées ont été révélées
-        for row in self.grid:
-            for cell in row:
+        for y in range(self.height):
+            for x in range(self.width):
+                cell = self.grid[y][x]
                 if not cell.is_mine and not cell.is_revealed:
                     return False
         return True
+
+def get_difficulty_settings(difficulty):
+    """Return the board size and number of mines based on the difficulty."""
+    if difficulty == 'easy':
+        return (9, 9, 10)
+    elif difficulty == 'medium':
+        return (16, 16, 40)
+    elif difficulty == 'hard':
+        return (30, 16, 99)
+    else:
+        raise ValueError(f"Unknown difficulty level: {difficulty}")
